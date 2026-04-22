@@ -1,0 +1,33 @@
+name: Deploy to Azure VM
+
+on:
+  push:
+    branches:
+      - main  # Əgər əsas branch-ın adı master-dirsə, bunu master et
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.VM_IP }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            # VM-də qovluğa keç və ya yoxdursa yarat
+            mkdir -p ~/app
+            cd ~/app
+            # Kodu yenilə
+            if [ ! -d ".git" ]; then
+              git clone https://github.com/${{ github.repository }} .
+            else
+              git pull origin main
+            fi
+            # Docker container-ləri yenidən başlat
+            sudo docker-compose down
+            sudo docker-compose up -d --build
